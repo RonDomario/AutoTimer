@@ -12,8 +12,8 @@ using the opacity slider.
 
 Credits:
 Jingle_Achievement_00.wav by LittleRobotSoundFactory
-https://freesound.org/people/LittleRobotSoundFactory/sounds/270404/
+https://freesound.org/s/244932/
 short buzzer.wav by kwahmah_02
-https://freesound.org/people/kwahmah_02/sounds/244932/
+https://freesound.org/s/244932/
 
 v0.9
