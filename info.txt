@@ -1,0 +1,19 @@
+A productivity app by Roman Zharkov.
+Set the frequency of the alarm
+and the duration of your task.
+Skip the current phase by
+clicking the Skip button.
+Press Esc to exit.
+
+You can set the window to always
+be on top of the other windows
+and set the opacity of the window
+using the opacity slider.
+
+Credits:
+Jingle_Achievement_00.wav by LittleRobotSoundFactory
+https://freesound.org/people/LittleRobotSoundFactory/sounds/270404/
+short buzzer.wav by kwahmah_02
+https://freesound.org/people/kwahmah_02/sounds/244932/
+
+v0.9
