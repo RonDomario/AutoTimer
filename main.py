@@ -48,26 +48,61 @@ class Window(QtWidgets.QMainWindow):
         self.opacity_slider.valueChanged.connect(self.changeOpacity)
         self.layout.addWidget(self.opacity_slider)
 
-        self.frequency_label = QtWidgets.QLabel("Frequency: 1m")
+        self.frequency_label = QtWidgets.QLabel("Frequency: 0h 0m 0s")
         self.layout.addWidget(self.frequency_label)
-        self.frequency_slider = QtWidgets.QSlider(QtCore.Qt.Orientation.Horizontal)
-        self.frequency_slider.setMinimum(1)
-        self.frequency_slider.setMaximum(60)
-        self.frequency_slider.setValue(1)
-        self.frequency_slider.valueChanged.connect(self.changeFrequency)
-        self.layout.addWidget(self.frequency_slider)
+        self.frequency_layout = QtWidgets.QHBoxLayout()
+        self.layout.addLayout(self.frequency_layout)
 
-        self.duration_label = QtWidgets.QLabel("Duration: 1m")
+        self.frequency_hours = QtWidgets.QDial()
+        self.frequency_hours.setRange(0, 59)
+        self.frequency_hours.setWrapping(False)
+        self.frequency_hours.setNotchesVisible(True)
+        self.frequency_hours.valueChanged.connect(self.changeFrequency)
+        self.frequency_layout.addWidget(self.frequency_hours)
+
+        self.frequency_minutes = QtWidgets.QDial()
+        self.frequency_minutes.setRange(0, 59)
+        self.frequency_minutes.setWrapping(False)
+        self.frequency_minutes.setNotchesVisible(True)
+        self.frequency_minutes.valueChanged.connect(self.changeFrequency)
+        self.frequency_layout.addWidget(self.frequency_minutes)
+
+        self.frequency_seconds = QtWidgets.QDial()
+        self.frequency_seconds.setRange(0, 59)
+        self.frequency_seconds.setWrapping(False)
+        self.frequency_seconds.setNotchesVisible(True)
+        self.frequency_seconds.valueChanged.connect(self.changeFrequency)
+        self.frequency_layout.addWidget(self.frequency_seconds)
+
+        self.duration_label = QtWidgets.QLabel("Duration: 0h 0m 0s")
         self.layout.addWidget(self.duration_label)
-        self.duration_slider = QtWidgets.QSlider(QtCore.Qt.Orientation.Horizontal)
-        self.duration_slider.setMinimum(1)
-        self.duration_slider.setMaximum(60)
-        self.duration_slider.setValue(1)
-        self.duration_slider.valueChanged.connect(self.changeDuration)
-        self.layout.addWidget(self.duration_slider)
+        self.duration_layout = QtWidgets.QHBoxLayout()
+        self.layout.addLayout(self.duration_layout)
+
+        self.duration_hours = QtWidgets.QDial()
+        self.duration_hours.setRange(0, 59)
+        self.duration_hours.setWrapping(False)
+        self.duration_hours.setNotchesVisible(True)
+        self.duration_hours.valueChanged.connect(self.changeDuration)
+        self.duration_layout.addWidget(self.duration_hours)
+
+        self.duration_minutes = QtWidgets.QDial()
+        self.duration_minutes.setRange(0, 59)
+        self.duration_minutes.setWrapping(False)
+        self.duration_minutes.setNotchesVisible(True)
+        self.duration_minutes.valueChanged.connect(self.changeDuration)
+        self.duration_layout.addWidget(self.duration_minutes)
+
+        self.duration_seconds = QtWidgets.QDial()
+        self.duration_seconds.setRange(0, 59)
+        self.duration_seconds.setWrapping(False)
+        self.duration_seconds.setNotchesVisible(True)
+        self.duration_seconds.valueChanged.connect(self.changeDuration)
+        self.duration_layout.addWidget(self.duration_seconds)
 
         self.time_value = QtWidgets.QLCDNumber()
-        self.time_value.display("01:00")
+        self.time_value.setDigitCount(8)
+        self.time_value.display("00:00:00")
         self.layout.addWidget(self.time_value)
 
         self.bottom_layout = QtWidgets.QHBoxLayout()
@@ -116,60 +151,85 @@ class Window(QtWidgets.QMainWindow):
         self.opacity_label.setText(f"Opacity: {value}%")
         self.setWindowOpacity(value / 100)
 
-    def changeFrequency(self, value):
-        self.frequency_label.setText(f"Frequency: {value}m")
-        self.time_value.display(f"{str(value).zfill(2)}:00")
+    def changeFrequency(self, _):
+        hours = self.frequency_hours.value()
+        minutes = self.frequency_minutes.value()
+        seconds = self.frequency_seconds.value()
+        self.frequency_label.setText(f"Frequency: {hours}h {minutes}m {seconds}s")
+        self.time_value.display(f"{hours:02}:{minutes:02}:{seconds:02}")
 
-    def changeDuration(self, value):
-        self.duration_label.setText(f"Duration: {value}m")
+    def changeDuration(self, _):
+        hours = self.duration_hours.value()
+        minutes = self.duration_minutes.value()
+        seconds = self.duration_seconds.value()
+        self.duration_label.setText(f"Duration: {hours}h {minutes}m {seconds}s")
 
     def updateTimer(self, value):
         value -= 1
-        minutes, seconds = divmod(value, 60)
-        self.time_value.display(f"{str(minutes).zfill(2)}:{str(seconds).zfill(2)}")
+        hours, minutes = divmod(value, 3600)
+        minutes, seconds = divmod(minutes, 60)
+        self.time_value.display(f"{hours:02}:{minutes:02}:{seconds:02}")
         return value
 
     def toggleTime(self):
         if self.phase == 1:
             self.frequency = self.updateTimer(self.frequency)
             if self.frequency <= 0:
-                self.alert.play()
+                self.frequency = (self.frequency_hours.value() * 3600 +
+                                  self.frequency_minutes.value() * 60 +
+                                  self.frequency_seconds.value())
                 self.phase = 2
-                self.frequency = self.frequency_slider.value() * 60
+                self.alert.play()
         elif self.phase == 2:
             self.duration = self.updateTimer(self.duration)
             if self.duration <= 0:
-                self.success.play()
+                self.duration = (self.duration_hours.value() * 3600 +
+                                 self.duration_minutes.value() * 60 +
+                                 self.duration_seconds.value())
                 self.phase = 1
-                self.duration = self.duration_slider.value() * 60
+                self.success.play()
 
     def startClock(self):
+        self.frequency = (self.frequency_hours.value() * 3600 +
+                          self.frequency_minutes.value() * 60 +
+                          self.frequency_seconds.value())
+        self.duration = (self.duration_hours.value() * 3600 +
+                         self.duration_minutes.value() * 60 +
+                         self.duration_seconds.value())
+        if self.frequency == 0 and self.duration == 0:
+            return
         self.phase = 1
         self.skip_button.setText("Skip\nBreak")
-        self.frequency = self.frequency_slider.value() * 60
-        self.duration = self.duration_slider.value() * 60
         self.start_button.setEnabled(False)
-        self.frequency_slider.setEnabled(False)
-        self.duration_slider.setEnabled(False)
+        self.frequency_minutes.setEnabled(False)
+        self.frequency_seconds.setEnabled(False)
+        self.duration_minutes.setEnabled(False)
+        self.duration_seconds.setEnabled(False)
         self.skip_button.setEnabled(True)
         self.stop_button.setEnabled(True)
         self.timer.start(1000)
 
     def skipClock(self):
         if self.phase == 1:
-            self.skip_button.setText("Skip\nTask")
+            self.frequency = (self.frequency_hours.value() * 3600 +
+                              self.frequency_minutes.value() * 60 +
+                              self.frequency_seconds.value())
             self.phase = 2
-            self.frequency = self.frequency_slider.value() * 60
+            self.skip_button.setText("Skip\nTask")
         elif self.phase == 2:
-            self.skip_button.setText("Skip\nBreak")
+            self.duration = (self.duration_hours.value() * 3600 +
+                             self.duration_minutes.value() * 60 +
+                             self.duration_seconds.value())
             self.phase = 1
-            self.duration = self.duration_slider.value() * 60
+            self.skip_button.setText("Skip\nBreak")
 
     def stopClock(self):
         self.timer.stop()
         self.start_button.setEnabled(True)
-        self.frequency_slider.setEnabled(True)
-        self.duration_slider.setEnabled(True)
+        self.frequency_minutes.setEnabled(True)
+        self.frequency_seconds.setEnabled(True)
+        self.duration_minutes.setEnabled(True)
+        self.duration_seconds.setEnabled(True)
         self.skip_button.setEnabled(False)
         self.stop_button.setEnabled(False)
 
