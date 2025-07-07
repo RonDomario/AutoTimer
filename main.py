@@ -1,5 +1,14 @@
 from PyQt6 import QtGui, QtWidgets, QtCore, QtMultimedia
+from os.path import join, abspath
 import sys
+
+
+def resource_path(relative_path):
+    if hasattr(sys, '_MEIPASS'):
+        base_path = sys._MEIPASS
+    else:
+        base_path = abspath(".")
+    return join(base_path, relative_path)
 
 
 class Window(QtWidgets.QMainWindow):
@@ -12,8 +21,8 @@ class Window(QtWidgets.QMainWindow):
         self.window_width = 200
         self.window_height = 300
         self.phase = 1
-        if QtCore.QFile.exists("media/themes/cucumber.png"):
-            self.cucumber = QtGui.QPixmap("media/themes/cucumber.png")
+        if QtCore.QFile.exists(resource_path("media/themes/cucumber.png")):
+            self.cucumber = QtGui.QPixmap(resource_path("media/themes/cucumber.png"))
         else:
             self.cucumber = QtGui.QPixmap(self.window_width, self.window_height)
             self.cucumber.fill(QtGui.QColor("gray"))
@@ -125,14 +134,14 @@ class Window(QtWidgets.QMainWindow):
         self.timer.timeout.connect(self.toggleTime)
 
         self.alert = QtMultimedia.QSoundEffect()
-        if QtCore.QFile.exists("media/sounds/alert.wav"):
-            self.alert.setSource(QtCore.QUrl.fromLocalFile("media/sounds/alert.wav"))
-            self.alert.setVolume(0.3)
+        if QtCore.QFile.exists(resource_path("media/sounds/alert.wav")):
+            self.alert.setSource(QtCore.QUrl.fromLocalFile(resource_path("media/sounds/alert.wav")))
+            self.alert.setVolume(0.2)
 
         self.success = QtMultimedia.QSoundEffect()
-        if QtCore.QFile.exists("media/sounds/success.wav"):
-            self.success.setSource(QtCore.QUrl.fromLocalFile("media/sounds/success.wav"))
-            self.success.setVolume(0.3)
+        if QtCore.QFile.exists(resource_path("media/sounds/success.wav")):
+            self.success.setSource(QtCore.QUrl.fromLocalFile(resource_path("media/sounds/success.wav")))
+            self.success.setVolume(0.2)
 
     def changeAlwaysOnTop(self):
         self.always_on_top = self.always_on_top_checkbox.isChecked()
@@ -201,8 +210,10 @@ class Window(QtWidgets.QMainWindow):
         self.phase = 1
         self.skip_button.setText("Skip\nBreak")
         self.start_button.setEnabled(False)
+        self.frequency_hours.setEnabled(False)
         self.frequency_minutes.setEnabled(False)
         self.frequency_seconds.setEnabled(False)
+        self.duration_hours.setEnabled(False)
         self.duration_minutes.setEnabled(False)
         self.duration_seconds.setEnabled(False)
         self.skip_button.setEnabled(True)
@@ -226,8 +237,10 @@ class Window(QtWidgets.QMainWindow):
     def stopClock(self):
         self.timer.stop()
         self.start_button.setEnabled(True)
+        self.frequency_hours.setEnabled(True)
         self.frequency_minutes.setEnabled(True)
         self.frequency_seconds.setEnabled(True)
+        self.duration_hours.setEnabled(True)
         self.duration_minutes.setEnabled(True)
         self.duration_seconds.setEnabled(True)
         self.skip_button.setEnabled(False)
