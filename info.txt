@@ -1,13 +1,14 @@
 A productivity app by Roman Zharkov.
-Set the frequency of the alarm
-and the duration of your task.
+Set the duration of the working phase
+and the duration of the break.
 Skip the current phase by
 clicking the Skip button.
 Press Esc to exit.
 
 You can set the window to always
-be on top of the other windows
-and set the opacity of the window
+be on top of the other windows,
+change the volume of the alerts
+and set the opacity of the window by
 using the opacity slider.
 
 Credits:
@@ -16,4 +17,4 @@ https://freesound.org/s/244932/
 short buzzer.wav by kwahmah_02
 https://freesound.org/s/244932/
 
-v0.9
+v0.95

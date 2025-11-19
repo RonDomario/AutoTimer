@@ -1,6 +1,7 @@
 from PyQt6 import QtGui, QtWidgets, QtCore, QtMultimedia
-from os.path import join, abspath
+from os.path import join, abspath, exists
 import sys
+from pathlib import Path
 
 
 def resource_path(relative_path):
@@ -14,25 +15,39 @@ def resource_path(relative_path):
 class Window(QtWidgets.QMainWindow):
     def __init__(self):
         super().__init__()
+        self.path = Path(__file__)
+        self.path_sounds = self.path.parent / "media/sounds"
+        self.path_themes = self.path.parent / "media/themes"
+        self.path_icon = self.path.parent / "media/icon.png"
+        self.path_config = self.path.parent / "config.ini"
         self.position = None
         self.always_on_top = True
-        self.break_duration = None
-        self.work_duration = None
+        self.work_duration = 0
+        self.break_duration = 0
+        self.work_volume = 100
+        self.break_volume = 100
         self.window_width = 200
         self.window_height = 300
         self.phase = 1
-        if QtCore.QFile.exists(resource_path("media/themes/cucumber.png")):
-            self.cucumber = QtGui.QPixmap(resource_path("media/themes/cucumber.png"))
+        self.theme = None
+        self.theme_names = {"apple", "coconut", "cucumber", "watermelon"}
+        self.theme_name = "cucumber"
+        self.settings = None
+        self.loadConfig()
+
+        if exists(self.path_themes / f"theme_{self.theme_name}.png"):
+            self.theme = QtGui.QPixmap(str(self.path_themes / f"theme_{self.theme_name}.png"))
         else:
-            self.cucumber = QtGui.QPixmap(self.window_width, self.window_height)
-            self.cucumber.fill(QtGui.QColor("gray"))
+            self.theme = QtGui.QPixmap(self.window_width, self.window_height)
+            self.theme.fill(QtGui.QColor("gray"))
+
         self.setWindowFlag(QtCore.Qt.WindowType.WindowStaysOnTopHint, self.always_on_top)
         self.setWindowFlag(QtCore.Qt.WindowType.FramelessWindowHint, True)
         self.setAttribute(QtCore.Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setFixedSize(self.window_width, self.window_height)
 
         self.central = QtWidgets.QLabel()
-        self.central.setPixmap(self.cucumber)
+        self.central.setPixmap(self.theme)
         self.central.setScaledContents(True)
         self.setCentralWidget(self.central)
         self.layout = QtWidgets.QVBoxLayout()
@@ -40,13 +55,11 @@ class Window(QtWidgets.QMainWindow):
         self.top_layout = QtWidgets.QHBoxLayout()
         self.layout.addLayout(self.top_layout)
 
-        self.always_on_top_checkbox = QtWidgets.QCheckBox("Always on top")
-        self.always_on_top_checkbox.setChecked(True)
-        self.always_on_top_checkbox.stateChanged.connect(self.changeAlwaysOnTop)
-        self.top_layout.addWidget(self.always_on_top_checkbox)
+        self.settings_button = QtWidgets.QPushButton("Settings")
+        self.settings_button.clicked.connect(self.openSettings)
+        self.top_layout.addWidget(self.settings_button)
         self.info_button = QtWidgets.QPushButton("Info")
-        self.info_button.clicked.connect(self.openSettings)
-        # self.info_button.clicked.connect(self.showInfo)
+        self.info_button.clicked.connect(self.showInfo)
         self.top_layout.addWidget(self.info_button)
 
         self.opacity_label = QtWidgets.QLabel("Opacity: 100%")
@@ -134,24 +147,49 @@ class Window(QtWidgets.QMainWindow):
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self.toggleTime)
 
-        self.alert = QtMultimedia.QSoundEffect()
-        if QtCore.QFile.exists(resource_path("media/sounds/alert.wav")):
-            self.alert.setSource(QtCore.QUrl.fromLocalFile(resource_path("media/sounds/alert.wav")))
-            self.alert.setVolume(0.2)
+        self.work_alert = QtMultimedia.QSoundEffect()
+        if exists(resource_path("media/sounds/alert.wav")):
+            self.work_alert.setSource(QtCore.QUrl.fromLocalFile(resource_path("media/sounds/alert.wav")))
+            self.work_alert.setVolume(self.work_volume / 100)
 
-        self.success = QtMultimedia.QSoundEffect()
-        if QtCore.QFile.exists(resource_path("media/sounds/success.wav")):
-            self.success.setSource(QtCore.QUrl.fromLocalFile(resource_path("media/sounds/success.wav")))
-            self.success.setVolume(0.2)
+        self.break_alert = QtMultimedia.QSoundEffect()
+        if exists(resource_path("media/sounds/success.wav")):
+            self.break_alert.setSource(QtCore.QUrl.fromLocalFile(resource_path("media/sounds/success.wav")))
+            self.break_alert.setVolume(self.break_volume / 100)
+
+    def loadConfig(self):
+        if exists(self.path_config):
+            self.settings = QtCore.QSettings(str(self.path_config), QtCore.QSettings.Format.IniFormat)
+            self.always_on_top = self.settings.value("app/always_on_top", type=bool)
+            self.work_volume = self.settings.value("app/work_volume", type=int)
+            self.break_volume = self.settings.value("app/break_volume", type=int)
+            self.theme_name = self.settings.value("app/theme_name", type=str)
+        else:
+            self.createConfig()
+
+    def createConfig(self):
+        self.path_config.touch()
+        self.settings = QtCore.QSettings(str(self.path_config), QtCore.QSettings.Format.IniFormat)
+        self.settings.setValue("app/always_on_top", self.always_on_top)
+        self.settings.setValue("app/work_volume", self.work_volume)
+        self.settings.setValue("app/break_volume", self.break_volume)
+        self.settings.setValue("app/theme_name", self.theme_name)
+
+    def saveConfig(self):
+        self.settings.setValue("app/always_on_top", self.always_on_top)
+        self.settings.setValue("app/work_volume", self.work_volume)
+        self.settings.setValue("app/break_volume", self.break_volume)
+        self.settings.setValue("app/theme_name", self.theme_name)
 
     def openSettings(self):
-        settings = Settings(self)
+        settings = Settings(self, self.always_on_top, self.work_volume, self.break_volume, self.theme)
         settings.exec()
-
-    def changeAlwaysOnTop(self):
-        self.always_on_top = self.always_on_top_checkbox.isChecked()
+        self.always_on_top, self.work_volume, self.break_volume, self.theme = settings.settings()
+        self.saveConfig()
         self.setWindowFlag(QtCore.Qt.WindowType.WindowStaysOnTopHint, self.always_on_top)
         self.show()
+        self.work_alert.setVolume(self.work_volume / 100)
+        self.break_alert.setVolume(self.break_volume / 100)
 
     def showInfo(self):
         try:
@@ -198,7 +236,7 @@ class Window(QtWidgets.QMainWindow):
                                       self.work_minutes.value() * 60 +
                                       self.work_seconds.value())
                 self.phase = 2
-                self.alert.play()
+                self.work_alert.play()
         elif self.phase == 2:
             self.break_duration = self.updateTimer(self.break_duration)
             if self.break_duration <= 0:
@@ -206,7 +244,7 @@ class Window(QtWidgets.QMainWindow):
                                        self.break_minutes.value() * 60 +
                                        self.break_seconds.value())
                 self.phase = 1
-                self.success.play()
+                self.break_alert.play()
 
     def startClock(self):
         self.work_duration = (self.work_hours.value() * 3600 +
@@ -216,6 +254,7 @@ class Window(QtWidgets.QMainWindow):
                                self.break_minutes.value() * 60 +
                                self.break_seconds.value())
         if self.work_duration == 0 and self.break_duration == 0:
+            QtWidgets.QMessageBox.information(self, "Error", "Duration can't be equal to 0")
             return
         self.phase = 1
         self.skip_button.setText("Skip\nBreak")
@@ -279,18 +318,35 @@ class Window(QtWidgets.QMainWindow):
 
 
 class Settings(QtWidgets.QDialog):
-    def __init__(self, parent):
+    def __init__(self, parent, always_on_top, work_volume, break_volume, theme):
         super().__init__(parent)
         self.position = None
+        self.always_on_top = always_on_top
+        self.work_volume = work_volume
+        self.break_volume = break_volume
+        self.theme = theme
         self.setFixedSize(200, 300)
+
         self.setWindowFlag(QtCore.Qt.WindowType.FramelessWindowHint, True)
+        self.setWindowFlag(QtCore.Qt.WindowType.WindowStaysOnTopHint, self.always_on_top)
+        self.setAttribute(QtCore.Qt.WidgetAttribute.WA_TranslucentBackground)
+
+        self.central = QtWidgets.QLabel(self)
+        self.central.setPixmap(self.theme)
+        self.central.setFixedSize(200, 300)
+        self.central.setScaledContents(True)
+
         self.layout = QtWidgets.QVBoxLayout()
         self.setLayout(self.layout)
         self.always_on_top_checkbox = QtWidgets.QCheckBox("Always on top")
-        self.always_on_top_checkbox.setChecked(True)
-        # self.always_on_top_checkbox.stateChanged.connect(self.changeAlwaysOnTop)
-        self.always_on_top_checkbox.stateChanged.connect(print)
+        self.always_on_top_checkbox.setChecked(self.always_on_top)
+        self.always_on_top_checkbox.stateChanged.connect(self.changeAlwaysOnTop)
         self.layout.addWidget(self.always_on_top_checkbox)
+
+        self.theme_label = QtWidgets.QLabel("Theme")
+        self.layout.addWidget(self.theme_label)
+        self.themes_combobox = QtWidgets.QComboBox()
+
         self.volume_label = QtWidgets.QLabel("Volume")
         self.layout.addWidget(self.volume_label)
 
@@ -299,31 +355,62 @@ class Settings(QtWidgets.QDialog):
 
         self.work_volume_layout = QtWidgets.QVBoxLayout()
         self.volume_layout.addLayout(self.work_volume_layout)
-        self.work_volume_label = QtWidgets.QLabel("Work: 100%")
+        self.work_volume_label = QtWidgets.QLabel(f"Work: {self.work_volume}%")
         self.work_volume_layout.addWidget(self.work_volume_label)
-        self.work_volume = QtWidgets.QDial()
-        self.work_volume.setRange(0, 100)
-        self.work_volume.setWrapping(False)
-        self.work_volume.setNotchesVisible(True)
-        # self.work_volume.valueChanged.connect(self.changeBreakDuration)
-        self.work_volume.valueChanged.connect(print)
-        self.work_volume_layout.addWidget(self.work_volume)
+        self.work_volume_dial = QtWidgets.QDial()
+        self.work_volume_dial.setRange(0, 100)
+        self.work_volume_dial.setValue(self.work_volume)
+        self.work_volume_dial.setWrapping(False)
+        self.work_volume_dial.setNotchesVisible(True)
+        self.work_volume_dial.valueChanged.connect(self.changeWorkVolume)
+        self.work_volume_layout.addWidget(self.work_volume_dial)
         self.work_volume_test_button = QtWidgets.QPushButton("Test")
+        self.work_volume_test_button.clicked.connect(self.testWorkVolume)
         self.work_volume_layout.addWidget(self.work_volume_test_button)
 
         self.break_volume_layout = QtWidgets.QVBoxLayout()
         self.volume_layout.addLayout(self.break_volume_layout)
-        self.break_volume_label = QtWidgets.QLabel("Break: 100%")
+        self.break_volume_label = QtWidgets.QLabel(f"Break: {self.break_volume}%")
         self.break_volume_layout.addWidget(self.break_volume_label)
-        self.break_volume = QtWidgets.QDial()
-        self.break_volume.setRange(0, 100)
-        self.break_volume.setWrapping(False)
-        self.break_volume.setNotchesVisible(True)
-        # self.break_volume.valueChanged.connect(self.changeBreakDuration)
-        self.break_volume.valueChanged.connect(print)
-        self.break_volume_layout.addWidget(self.break_volume)
+        self.break_volume_dial = QtWidgets.QDial()
+        self.break_volume_dial.setRange(0, 100)
+        self.break_volume_dial.setValue(self.break_volume)
+        self.break_volume_dial.setWrapping(False)
+        self.break_volume_dial.setNotchesVisible(True)
+        self.break_volume_dial.valueChanged.connect(self.changeBreakVolume)
+        self.break_volume_layout.addWidget(self.break_volume_dial)
         self.break_volume_test_button = QtWidgets.QPushButton("Test")
+        self.break_volume_test_button.clicked.connect(self.testBreakVolume)
         self.break_volume_layout.addWidget(self.break_volume_test_button)
+
+        self.work_alert = QtMultimedia.QSoundEffect()
+        if exists(resource_path("media/sounds/alert.wav")):
+            self.work_alert.setSource(QtCore.QUrl.fromLocalFile(resource_path("media/sounds/alert.wav")))
+            self.work_alert.setVolume(self.work_volume / 100)
+
+        self.break_alert = QtMultimedia.QSoundEffect()
+        if exists(resource_path("media/sounds/success.wav")):
+            self.break_alert.setSource(QtCore.QUrl.fromLocalFile(resource_path("media/sounds/success.wav")))
+            self.break_alert.setVolume(self.break_volume / 100)
+
+    def changeAlwaysOnTop(self):
+        self.always_on_top = self.always_on_top_checkbox.isChecked()
+
+    def changeWorkVolume(self, value):
+        self.work_volume = value
+        self.work_alert.setVolume(self.work_volume / 100)
+        self.work_volume_label.setText(f"Work: {value}%")
+
+    def changeBreakVolume(self, value):
+        self.break_volume = value
+        self.break_alert.setVolume(self.break_volume / 100)
+        self.break_volume_label.setText(f"Break: {value}%")
+
+    def testWorkVolume(self):
+        self.work_alert.play()
+
+    def testBreakVolume(self):
+        self.break_alert.play()
 
     def mousePressEvent(self, event):
         if event.button() == QtCore.Qt.MouseButton.LeftButton:
@@ -335,6 +422,13 @@ class Settings(QtWidgets.QDialog):
 
     def mouseReleaseEvent(self, event):
         self.position = None
+
+    def settings(self):
+        always_on_top = self.always_on_top_checkbox.isChecked()
+        work_volume = self.work_volume
+        break_volume = self.break_volume
+        theme = self.theme
+        return always_on_top, work_volume, break_volume, theme
 
 
 if __name__ == '__main__':
