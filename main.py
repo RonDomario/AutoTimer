@@ -12,7 +12,7 @@ class Window(QtWidgets.QMainWindow):
         self.path_sounds = self.path.parent / "media/sounds"
         self.path_themes = self.path.parent / "media/themes"
         self.path_icon = self.path.parent / "media/icon.png"
-        self.path_config = self.path.parent / "config.ini"
+        self.path_config = self.path.parent / "autotimer_config.ini"
         self.position = None
         self.always_on_top = True
         self.work_duration = 0
