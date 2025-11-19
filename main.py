@@ -1,15 +1,8 @@
+from typing import Any
+
 from PyQt6 import QtGui, QtWidgets, QtCore, QtMultimedia
-from os.path import join, abspath, exists
 import sys
 from pathlib import Path
-
-
-def resource_path(relative_path):
-    if hasattr(sys, '_MEIPASS'):
-        base_path = sys._MEIPASS
-    else:
-        base_path = abspath(".")
-    return join(base_path, relative_path)
 
 
 class Window(QtWidgets.QMainWindow):
@@ -35,7 +28,7 @@ class Window(QtWidgets.QMainWindow):
         self.settings = None
         self.loadConfig()
 
-        if exists(self.path_themes / f"theme_{self.theme_name}.png"):
+        if (self.path_themes / f"theme_{self.theme_name}.png").exists():
             self.theme = QtGui.QPixmap(str(self.path_themes / f"theme_{self.theme_name}.png"))
         else:
             self.theme = QtGui.QPixmap(self.window_width, self.window_height)
@@ -148,17 +141,19 @@ class Window(QtWidgets.QMainWindow):
         self.timer.timeout.connect(self.toggleTime)
 
         self.work_alert = QtMultimedia.QSoundEffect()
-        if exists(resource_path("media/sounds/alert.wav")):
-            self.work_alert.setSource(QtCore.QUrl.fromLocalFile(resource_path("media/sounds/alert.wav")))
+        if (self.path_sounds / "alert.wav").exists():
+            self.work_alert.setSource(QtCore.QUrl.fromLocalFile(str(self.path_sounds / "alert.wav")))
             self.work_alert.setVolume(self.work_volume / 100)
 
         self.break_alert = QtMultimedia.QSoundEffect()
-        if exists(resource_path("media/sounds/success.wav")):
-            self.break_alert.setSource(QtCore.QUrl.fromLocalFile(resource_path("media/sounds/success.wav")))
+        if (self.path_sounds / "success.wav").exists():
+            self.break_alert.setSource(QtCore.QUrl.fromLocalFile(str(self.path_sounds / "success.wav")))
             self.break_alert.setVolume(self.break_volume / 100)
 
-    def loadConfig(self):
-        if exists(self.path_config):
+    def loadConfig(self) -> None:
+        """Loads information on always_on_top, work_volume, break_volume and theme_name.
+        If file is absent, creates one with current settings."""
+        if self.path_config.exists():
             self.settings = QtCore.QSettings(str(self.path_config), QtCore.QSettings.Format.IniFormat)
             self.always_on_top = self.settings.value("app/always_on_top", type=bool)
             self.work_volume = self.settings.value("app/work_volume", type=int)
@@ -166,69 +161,98 @@ class Window(QtWidgets.QMainWindow):
             self.theme_name = self.settings.value("app/theme_name", type=str)
         else:
             self.createConfig()
+        return
 
-    def createConfig(self):
+    def createConfig(self) -> None:
+        """Creates a config file based on current settings."""
         self.path_config.touch()
         self.settings = QtCore.QSettings(str(self.path_config), QtCore.QSettings.Format.IniFormat)
         self.settings.setValue("app/always_on_top", self.always_on_top)
         self.settings.setValue("app/work_volume", self.work_volume)
         self.settings.setValue("app/break_volume", self.break_volume)
         self.settings.setValue("app/theme_name", self.theme_name)
+        return
 
-    def saveConfig(self):
+    def saveConfig(self) -> None:
+        """Saves current settings to the config file."""
         self.settings.setValue("app/always_on_top", self.always_on_top)
         self.settings.setValue("app/work_volume", self.work_volume)
         self.settings.setValue("app/break_volume", self.break_volume)
         self.settings.setValue("app/theme_name", self.theme_name)
+        return
 
-    def openSettings(self):
-        settings = Settings(self, self.always_on_top, self.work_volume, self.break_volume, self.theme)
+    def openSettings(self) -> None:
+        """Opens a modal Settings window. After the window closes, updates the config file and settings."""
+        settings = Settings(self, self.always_on_top, self.work_volume, self.break_volume,
+                            self.theme, self.theme_name, self.theme_names)
         settings.exec()
-        self.always_on_top, self.work_volume, self.break_volume, self.theme = settings.settings()
+        self.always_on_top, self.work_volume, self.break_volume, self.theme, self.theme_name = settings.settings()
         self.saveConfig()
+
+        if (self.path_themes / f"theme_{self.theme_name}.png").exists():
+            self.theme = QtGui.QPixmap(str(self.path_themes / f"theme_{self.theme_name}.png"))
+        else:
+            self.theme = QtGui.QPixmap(self.window_width, self.window_height)
+            self.theme.fill(QtGui.QColor("gray"))
+        self.central.setPixmap(self.theme)
+
         self.setWindowFlag(QtCore.Qt.WindowType.WindowStaysOnTopHint, self.always_on_top)
         self.show()
+
         self.work_alert.setVolume(self.work_volume / 100)
         self.break_alert.setVolume(self.break_volume / 100)
+        return
 
-    def showInfo(self):
+    def showInfo(self) -> None:
+        """Info on creator (me) and royalties."""
         try:
             with open("info.txt", "r") as file:
                 info = "".join(file.readlines())
         except FileNotFoundError:
             info = ""
         QtWidgets.QMessageBox.information(self, "Info", info)
+        return
 
-    def changeOpacity(self, value):
+    def changeOpacity(self, value) -> None:
+        """Changes the window's opacity and updates the opacity label."""
         self.opacity_label.setText(f"Opacity: {value}%")
         self.setWindowOpacity(value / 100)
+        return
 
-    def changeWorkDuration(self, _):
+    def changeWorkDuration(self, _) -> None:
+        """Updates the work label and lcd."""
         hours = self.work_hours.value()
         minutes = self.work_minutes.value()
         seconds = self.work_seconds.value()
-        self.work_label.setText(f"Frequency: {hours}h {minutes}m {seconds}s")
+        self.work_label.setText(f"Work: {hours}h {minutes}m {seconds}s")
         self.time_value.display(f"{hours:02}:{minutes:02}:{seconds:02}")
+        return
 
-    def changeBreakDuration(self, _):
+    def changeBreakDuration(self, _) -> None:
+        """Updates the break label."""
         hours = self.break_hours.value()
         minutes = self.break_minutes.value()
         seconds = self.break_seconds.value()
-        self.brake_label.setText(f"Duration: {hours}h {minutes}m {seconds}s")
+        self.brake_label.setText(f"Break: {hours}h {minutes}m {seconds}s")
+        return
 
     @staticmethod
-    def timeToHMS(time: int):
+    def timeToHMS(time: int) -> tuple[int, int, int]:
+        """Translates the received time in seconds to hours, minutes and seconds."""
         hours, minutes = divmod(time, 3600)
         minutes, seconds = divmod(minutes, 60)
         return hours, minutes, seconds
 
-    def updateTimer(self, value):
+    def updateTimer(self, value: int) -> int:
+        """Reduces the time left by 1 second and updates the lcd."""
         value -= 1
         hours, minutes, seconds = self.timeToHMS(value)
         self.time_value.display(f"{hours:02}:{minutes:02}:{seconds:02}")
         return value
 
-    def toggleTime(self):
+    def toggleTime(self) -> None:
+        """Depending on the phase, ticks 1 second at a time.
+        When the timer runs out, changes the phase and plays an alert."""
         if self.phase == 1:
             self.work_duration = self.updateTimer(self.work_duration)
             if self.work_duration <= 0:
@@ -245,8 +269,11 @@ class Window(QtWidgets.QMainWindow):
                                        self.break_seconds.value())
                 self.phase = 1
                 self.break_alert.play()
+        return
 
-    def startClock(self):
+    def startClock(self) -> None:
+        """Calculates the work and break duration. If either is 0, shows a message.
+        Enables what needs to be enabled, disables what needs to be disabled."""
         self.work_duration = (self.work_hours.value() * 3600 +
                               self.work_minutes.value() * 60 +
                               self.work_seconds.value())
@@ -268,8 +295,10 @@ class Window(QtWidgets.QMainWindow):
         self.skip_button.setEnabled(True)
         self.stop_button.setEnabled(True)
         self.timer.start(1000)
+        return
 
-    def skipClock(self):
+    def skipClock(self) -> None:
+        """Skips the current phase."""
         if self.phase == 1:
             hours, minutes, seconds = self.timeToHMS(self.break_duration)
             self.time_value.display(f"{hours:02}:{minutes:02}:{seconds:02}")
@@ -286,8 +315,11 @@ class Window(QtWidgets.QMainWindow):
                                    self.break_seconds.value())
             self.phase = 1
             self.skip_button.setText("Skip\nBreak")
+        return
 
-    def stopClock(self):
+    def stopClock(self) -> None:
+        """Stops the timer, changes the time on display to work duration.
+        Enables what needs to be enabled, disables what needs to be disabled."""
         self.timer.stop()
         hours, minutes, seconds = self.timeToHMS(self.work_duration)
         self.time_value.display(f"{hours:02}:{minutes:02}:{seconds:02}")
@@ -300,32 +332,48 @@ class Window(QtWidgets.QMainWindow):
         self.break_seconds.setEnabled(True)
         self.skip_button.setEnabled(False)
         self.stop_button.setEnabled(False)
+        return
 
-    def keyPressEvent(self, event):
+    def keyPressEvent(self, event) -> None:
+        """Closes the window on Escape"""
         if event.key() == QtCore.Qt.Key.Key_Escape:
             self.close()
+        return
 
-    def mousePressEvent(self, event):
+    def mousePressEvent(self, event) -> None:
+        """Required to move the window with LMB."""
         if event.button() == QtCore.Qt.MouseButton.LeftButton:
             self.position = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
+        return
 
-    def mouseMoveEvent(self, event):
+    def mouseMoveEvent(self, event) -> None:
+        """Required to move the window with LMB."""
         if self.position is not None:
             self.move(event.globalPosition().toPoint() - self.position)
+        return
 
-    def mouseReleaseEvent(self, event):
+    def mouseReleaseEvent(self, event) -> None:
+        """Required to move the window with LMB."""
         self.position = None
+        return
 
 
 class Settings(QtWidgets.QDialog):
-    def __init__(self, parent, always_on_top, work_volume, break_volume, theme):
+    def __init__(self, parent, always_on_top, work_volume, break_volume, theme, theme_name, theme_names):
         super().__init__(parent)
         self.position = None
+        self.path = Path(__file__)
+        self.path_sounds = self.path.parent / "media/sounds"
+        self.path_themes = self.path.parent / "media/themes"
         self.always_on_top = always_on_top
         self.work_volume = work_volume
         self.break_volume = break_volume
         self.theme = theme
-        self.setFixedSize(200, 300)
+        self.theme_name = theme_name
+        self.theme_names = theme_names
+        self.window_width = 200
+        self.window_height = 300
+        self.setFixedSize(self.window_width, self.window_height)
 
         self.setWindowFlag(QtCore.Qt.WindowType.FramelessWindowHint, True)
         self.setWindowFlag(QtCore.Qt.WindowType.WindowStaysOnTopHint, self.always_on_top)
@@ -333,7 +381,7 @@ class Settings(QtWidgets.QDialog):
 
         self.central = QtWidgets.QLabel(self)
         self.central.setPixmap(self.theme)
-        self.central.setFixedSize(200, 300)
+        self.central.setFixedSize(self.window_width, self.window_height)
         self.central.setScaledContents(True)
 
         self.layout = QtWidgets.QVBoxLayout()
@@ -346,6 +394,10 @@ class Settings(QtWidgets.QDialog):
         self.theme_label = QtWidgets.QLabel("Theme")
         self.layout.addWidget(self.theme_label)
         self.themes_combobox = QtWidgets.QComboBox()
+        self.themes_combobox.addItems(self.theme_names)
+        self.themes_combobox.setCurrentText(self.theme_name)
+        self.themes_combobox.currentTextChanged.connect(self.changeTheme)
+        self.layout.addWidget(self.themes_combobox)
 
         self.volume_label = QtWidgets.QLabel("Volume")
         self.layout.addWidget(self.volume_label)
@@ -384,51 +436,80 @@ class Settings(QtWidgets.QDialog):
         self.break_volume_layout.addWidget(self.break_volume_test_button)
 
         self.work_alert = QtMultimedia.QSoundEffect()
-        if exists(resource_path("media/sounds/alert.wav")):
-            self.work_alert.setSource(QtCore.QUrl.fromLocalFile(resource_path("media/sounds/alert.wav")))
+        if (self.path_sounds / "alert.wav").exists():
+            self.work_alert.setSource(QtCore.QUrl.fromLocalFile(str(self.path_sounds / "alert.wav")))
             self.work_alert.setVolume(self.work_volume / 100)
 
         self.break_alert = QtMultimedia.QSoundEffect()
-        if exists(resource_path("media/sounds/success.wav")):
-            self.break_alert.setSource(QtCore.QUrl.fromLocalFile(resource_path("media/sounds/success.wav")))
+        if (self.path_sounds / "success.wav").exists():
+            self.break_alert.setSource(QtCore.QUrl.fromLocalFile(str(self.path_sounds / "success.wav")))
             self.break_alert.setVolume(self.break_volume / 100)
 
-    def changeAlwaysOnTop(self):
-        self.always_on_top = self.always_on_top_checkbox.isChecked()
+    def changeTheme(self, theme_name) -> None:
+        """Changes the theme of the settings window. Main window updates after the settings close."""
+        self.theme_name = theme_name
+        if (self.path_themes / f"theme_{self.theme_name}.png").exists():
+            self.theme = QtGui.QPixmap(str(self.path_themes / f"theme_{self.theme_name}.png"))
+        else:
+            self.theme = QtGui.QPixmap(self.window_width, self.window_height)
+            self.theme.fill(QtGui.QColor("gray"))
+        self.central.setPixmap(self.theme)
+        return
 
-    def changeWorkVolume(self, value):
+    def changeAlwaysOnTop(self) -> None:
+        """Changes always_on_top based on the check."""
+        self.always_on_top = self.always_on_top_checkbox.isChecked()
+        return
+
+    def changeWorkVolume(self, value) -> None:
+        """Changes the work alert volume and updates the label."""
         self.work_volume = value
         self.work_alert.setVolume(self.work_volume / 100)
         self.work_volume_label.setText(f"Work: {value}%")
+        return
 
-    def changeBreakVolume(self, value):
+    def changeBreakVolume(self, value) -> None:
+        """Changes the break alert volume and updates the label."""
         self.break_volume = value
         self.break_alert.setVolume(self.break_volume / 100)
         self.break_volume_label.setText(f"Break: {value}%")
+        return
 
-    def testWorkVolume(self):
+    def testWorkVolume(self) -> None:
+        """Plays work alert to test the volume."""
         self.work_alert.play()
+        return
 
-    def testBreakVolume(self):
+    def testBreakVolume(self) -> None:
+        """Plays break alert to test the volume."""
         self.break_alert.play()
+        return
 
-    def mousePressEvent(self, event):
+    def mousePressEvent(self, event) -> None:
+        """Required to move the window with LMB."""
         if event.button() == QtCore.Qt.MouseButton.LeftButton:
             self.position = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
+        return
 
-    def mouseMoveEvent(self, event):
+    def mouseMoveEvent(self, event) -> None:
+        """Required to move the window with LMB."""
         if self.position is not None:
             self.move(event.globalPosition().toPoint() - self.position)
+        return
 
-    def mouseReleaseEvent(self, event):
+    def mouseReleaseEvent(self, event) -> None:
+        """Required to move the window with LMB."""
         self.position = None
+        return
 
-    def settings(self):
+    def settings(self) -> tuple[bool, Any, Any, Any, Any]:
+        """Returns the settings to the main window."""
         always_on_top = self.always_on_top_checkbox.isChecked()
         work_volume = self.work_volume
         break_volume = self.break_volume
         theme = self.theme
-        return always_on_top, work_volume, break_volume, theme
+        theme_name = self.theme_name
+        return always_on_top, work_volume, break_volume, theme, theme_name
 
 
 if __name__ == '__main__':
