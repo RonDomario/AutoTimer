@@ -1,18 +1,24 @@
 from typing import Any
-
 from PyQt6 import QtGui, QtWidgets, QtCore, QtMultimedia
 import sys
 from pathlib import Path
 
 
+def resource_path(relative_path):
+    if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
+        base_path = Path(sys._MEIPASS)
+    else:
+        base_path = Path(__file__).parent
+    return base_path / relative_path
+
+
 class Window(QtWidgets.QMainWindow):
     def __init__(self):
         super().__init__()
-        self.path = Path(__file__)
-        self.path_sounds = self.path.parent / "media/sounds"
-        self.path_themes = self.path.parent / "media/themes"
-        self.path_icon = self.path.parent / "media/icon.png"
-        self.path_config = self.path.parent / "autotimer_config.ini"
+        self.path_sounds = resource_path("media/sounds")
+        self.path_themes = resource_path("media/themes")
+        self.path_icon = resource_path("media/icon.png")
+        self.path_config = Path("autotimer_config.ini")
         self.position = None
         self.always_on_top = True
         self.work_duration = 0
@@ -206,7 +212,7 @@ class Window(QtWidgets.QMainWindow):
     def showInfo(self) -> None:
         """Info on creator (me) and royalties."""
         try:
-            with open("info.txt", "r") as file:
+            with open(resource_path("info.txt"), "r") as file:
                 info = "".join(file.readlines())
         except FileNotFoundError:
             info = ""

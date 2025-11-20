@@ -2,6 +2,6 @@ venv
 .idea
 build
 dist
-notes
+installation.txt
 AutoTimer.spec
 todo.md
