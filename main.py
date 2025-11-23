@@ -2,6 +2,7 @@ from typing import Any
 from PyQt6 import QtGui, QtWidgets, QtCore, QtMultimedia
 import sys
 from pathlib import Path
+from stylesheets import lcd
 
 
 def resource_path(relative_path):
@@ -76,7 +77,7 @@ class Window(QtWidgets.QMainWindow):
         self.layout.addLayout(self.work_layout)
 
         self.work_hours = QtWidgets.QDial()
-        self.work_hours.setRange(0, 59)
+        self.work_hours.setRange(0, 99)
         self.work_hours.setWrapping(False)
         self.work_hours.setNotchesVisible(True)
         self.work_hours.valueChanged.connect(self.changeWorkDuration)
@@ -102,7 +103,7 @@ class Window(QtWidgets.QMainWindow):
         self.layout.addLayout(self.break_layout)
 
         self.break_hours = QtWidgets.QDial()
-        self.break_hours.setRange(0, 59)
+        self.break_hours.setRange(0, 99)
         self.break_hours.setWrapping(False)
         self.break_hours.setNotchesVisible(True)
         self.break_hours.valueChanged.connect(self.changeBreakDuration)
@@ -123,8 +124,11 @@ class Window(QtWidgets.QMainWindow):
         self.break_layout.addWidget(self.break_seconds)
 
         self.time_value = QtWidgets.QLCDNumber()
+        self.time_value.setSegmentStyle(QtWidgets.QLCDNumber.SegmentStyle.Flat)
         self.time_value.setDigitCount(8)
         self.time_value.display("00:00:00")
+        self.time_value.setMinimumSize(150, 35)
+        self.time_value.setStyleSheet(lcd.style)
         self.layout.addWidget(self.time_value)
 
         self.bottom_layout = QtWidgets.QHBoxLayout()
