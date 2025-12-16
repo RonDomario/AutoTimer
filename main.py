@@ -271,6 +271,7 @@ class Window(QtWidgets.QMainWindow):
                                       self.work_seconds.value())
                 self.phase = 2
                 self.work_alert.play()
+                self.skip_button.setText("Skip\nBreak")
         elif self.phase == 2:
             self.break_duration = self.updateTimer(self.break_duration)
             if self.break_duration <= 0:
@@ -279,6 +280,7 @@ class Window(QtWidgets.QMainWindow):
                                        self.break_seconds.value())
                 self.phase = 1
                 self.break_alert.play()
+                self.skip_button.setText("Skip\nWork")
         return
 
     def startClock(self) -> None:
@@ -294,7 +296,7 @@ class Window(QtWidgets.QMainWindow):
             QtWidgets.QMessageBox.information(self, "Error", "Duration can't be equal to 0")
             return
         self.phase = 1
-        self.skip_button.setText("Skip\nBreak")
+        self.skip_button.setText("Skip\nWork")
         self.start_button.setEnabled(False)
         self.work_hours.setEnabled(False)
         self.work_minutes.setEnabled(False)
@@ -316,7 +318,7 @@ class Window(QtWidgets.QMainWindow):
                                   self.work_minutes.value() * 60 +
                                   self.work_seconds.value())
             self.phase = 2
-            self.skip_button.setText("Skip\nTask")
+            self.skip_button.setText("Skip\nBreak")
         elif self.phase == 2:
             hours, minutes, seconds = self.timeToHMS(self.work_duration)
             self.time_value.display(f"{hours:02}:{minutes:02}:{seconds:02}")
@@ -324,7 +326,7 @@ class Window(QtWidgets.QMainWindow):
                                    self.break_minutes.value() * 60 +
                                    self.break_seconds.value())
             self.phase = 1
-            self.skip_button.setText("Skip\nBreak")
+            self.skip_button.setText("Skip\nWork")
         return
 
     def stopClock(self) -> None:

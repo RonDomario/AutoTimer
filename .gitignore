@@ -2,6 +2,7 @@ venv
 .idea
 build
 dist
+temp
 stylesheets/__pycache__
 installation.txt
 AutoTimer.spec
